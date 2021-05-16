@@ -22,6 +22,38 @@ def generateFalseRate():
     
     return(falseRate)
 
+def generateCondition(quality):
+    conditionsArr = np.array([None] * len(quality))
+    conditions = [1,2,3]
+    
+    iterations = round(len(quality)/3)
+    for condition in conditions:
+        NoneIndex = np.where(conditionsArr == None)[0]
+        replacement = np.random.choice(NoneIndex, iterations, replace = False)
+        
+        conditionsArr[replacement] = condition
+    
+    #get leftovers when len(quality)%3 != 0
+    conditionsArr[np.where(conditionsArr == None)[0]] = 1
+    
+    return(conditionsArr)
+
+def generateIntensity(quality, ntc):
+    quality_ntc = np.array([quality, ntc]).T
+    
+    intensity = np.array([None]*len(quality_ntc))
+    
+    intensity[np.where((quality_ntc[:,0] >= 0.88) & (quality_ntc[:,1] < 5))] = percentageWithRandom(100, 4, 
+                                                                                                     np.count_nonzero((quality_ntc[:,0] >= 0.88) & (quality_ntc[:,1] < 5)), generateFalseRate())
+    intensity[np.where((quality_ntc[:,0] >= 0.88) & (quality_ntc[:,1] >= 5))] = percentageWithRandom(130, 10, 
+                                                                                                     np.count_nonzero((quality_ntc[:,0] >= 0.88) & (quality_ntc[:,1] >= 5)), 0)
+    intensity[np.where((quality_ntc[:,0] < 0.88) & (quality_ntc[:,0] >= 0.44))] = percentageWithRandom(50, 20, 
+                                                                                                       np.count_nonzero((quality_ntc[:,0] < 0.88) & (quality_ntc[:,0] >= 0.44)), 0)
+    intensity[np.where((quality_ntc[:,0] < 0.44))] = percentageWithRandom(10, 40,
+                                                                          np.count_nonzero(quality_ntc[:,0] < 0.44), 0)
+  
+    return(intensity)
+
 def negativeConcentration(quality):
     concentrations = np.array([None] * len(quality))
     concentrations[np.where(quality >= 0.88)] = percentageWithRandom(1, 4, np.count_nonzero(quality>0.88), generateFalseRate())
@@ -33,15 +65,16 @@ def negativeConcentration(quality):
     
     return(concentrations)
 
-def createDataFrame(numSamples):
-    #falsePositive = generateFalseRate()
-    #falseNegative = generateFalseRate()
-    
+def createDataFrame(numSamples):   
     trials = np.linspace(1,numSamples, numSamples)
     quality_pct = randomPercentage(len(trials))
     negativeControl = negativeConcentration(quality_pct)
+    intensity = generateIntensity(quality_pct, negativeControl)
+    conditions = generateCondition(quality_pct)
     
     rand_data = pd.DataFrame({"Trials":trials, "Quality": quality_pct,
-                              "Negative_Control_Concentration":negativeControl})
+                              "Negative_Control_Concentration":negativeControl,
+                              "Intensity":intensity,
+                              "Condition":conditions})
     
     return(rand_data)
