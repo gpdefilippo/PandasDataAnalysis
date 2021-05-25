@@ -66,16 +66,45 @@ def negativeConcentration(quality):
     
     return(concentrations)
 
-def createDataFrame(numSamples):   
+def createSampleNames(quality):
+    countSamples = int(len(quality)/3)
+    
+    
+    sigDigits = 0
+    for value in str(countSamples):
+        sigDigits += 1
+    
+    formatType = "{:0>" + str(sigDigits) + "}"
+    
+    sampleNums = np.array(range(int(countSamples)), dtype = object) + 1
+    for sampleInd in range(countSamples):
+        sampleName = "ND" + formatType.format(sampleNums[sampleInd])
+        sampleNums[sampleInd] = sampleName
+    
+    return(sampleNums)
+
+def assignSampleNames(df, Names):
+    
+    for condition in pd.unique(df['Condition']):
+        df.loc[df['Condition'] == condition, "Sample_ID"] = Names
+
+    return(df)
+
+def createDataFrame(numSamples):
+    numSamples = numSamples-(numSamples%3)
+    
     trials = np.linspace(1,numSamples, numSamples)
     quality_pct = randomPercentage(len(trials))
     negativeControl = negativeConcentration(quality_pct)
     intensity = generateIntensity(quality_pct, negativeControl)
     conditions = generateCondition(quality_pct)
+    sampleNames = createSampleNames(quality_pct)
     
     rand_data = pd.DataFrame({"Trials":trials, "Quality": quality_pct,
                               "Negative_Control_Concentration":negativeControl,
                               "Intensity":intensity,
                               "Condition":conditions})
+    
+    rand_data = assignSampleNames(rand_data, sampleNames)
     
     return(rand_data)
